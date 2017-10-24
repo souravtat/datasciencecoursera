@@ -1,0 +1,89 @@
+---
+title: "Approach for variable selection and prediction"
+author: "Sourav Tat"
+date: "September 11, 2017"
+output: html_document
+---
+
+
+```{r total_steps_per_day_histogram, fig.keep="all", fig.show="asis"}
+```
+
+
+
+##  Feature plot to find the relation between the outcome and important   predictors.
+
+
+```{r loadData,cache=TRUE}
+library(ISLR); library(ggplot2); library(caret);
+data(Wage); Wage <- subset(Wage,select=-c(logwage))
+inTrain <- createDataPartition(y=Wage$wage,
+                              p=0.7, list=FALSE)
+training <- Wage[inTrain,]; testing <- Wage[-inTrain,]
+featurePlot(x=training[,c("age","education","jobclass")],
+            y = training$wage,
+            plot="pairs")
+
+```
+
+## Discard the predictors that do not have any variability
+```{r }
+# par(mfrow=c(1,1))   # Reset par
+nsv <- nearZeroVar(training,saveMetrics = TRUE)
+nsv
+
+```
+
+
+##  Plot any pair and see if you can explain the outliers with  another predictors
+ 
+ 
+```{r }
+library(ggplot2)
+ g <- ggplot(training,aes(age,wage))
+ g + geom_point(aes(color=jobclass))
+ 
+```
+
+##  Model with most important variable according to the judgement
+ 
+ 
+```{r}
+library(caret)
+modFit<- train(wage ~ age + jobclass + education,
+               method = "lm",data=training)
+
+finMod <- modFit$finalModel
+print(modFit)
+
+lmfit <- lm(wage ~ age + jobclass + education,data=training)
+
+summary(lmfit)
+
+```
+ 
+## Fitted vs Residuals-Imp Plot (Explain outlieres through Color by variables not used in the model)
+ 
+ 
+```{r}
+g <- ggplot(training,aes(finMod$fitted,finMod$residuals))
+g + geom_point(aes(color=race))
+
+```
+ 
+## Plot by index (if a trend is being observed then a predictor seems to have missed)
+
+```{r,dependson="modelFit",fig.height=5,fig.width=5}
+plot(finMod$residuals,pch=19)
+```
+ 
+## Predicted versus truth in test set
+
+```{r}
+pred <- predict(modFit, testing)
+g <- ggplot(testing,aes(wage,pred))
+g + geom_point(aes(color=year))
+
+```
+ 
+ 
